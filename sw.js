@@ -1,5 +1,5 @@
 /* Nudge service worker: offline shell + notification actions. Bump VERSION when you change files. */
-const VERSION = 'nudge-v21';
+const VERSION = 'nudge-v22';
 const SHELL = [
   './', './index.html', './style.css', './core.js', './native.js', './sync.js', './app.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png',

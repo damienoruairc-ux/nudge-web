@@ -345,3 +345,19 @@ b.when { font-size: 15px; }
 
 .hues { display: flex; flex-wrap: wrap; gap: 10px; padding: 4px 4px 14px; }
 .hues .sw-c { width: 36px; height: 36px; }
+
+/* settings accordion + compact tags */
+.acc { border-top: 1px solid var(--line); }
+.acc:last-of-type { border-bottom: 1px solid var(--line); }
+.acc > summary { list-style: none; display: flex; align-items: center; gap: 10px; padding: 15px 2px; cursor: pointer; font-size: 12px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; color: var(--ink); -webkit-tap-highlight-color: transparent; }
+.acc > summary::-webkit-details-marker { display: none; }
+.acc > summary span { flex: 1; }
+.acc > summary em { font-style: normal; font-weight: 700; letter-spacing: 0; text-transform: none; font-size: 13px; color: var(--muted); }
+.chev { width: 9px; height: 9px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .15s; margin: -3px 4px 0 0; }
+.acc[open] > summary .chev { transform: rotate(-135deg); margin-top: 3px; }
+.acc-b { padding: 0 2px 16px; }
+.tchips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.tchip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 4px 4px 6px; border: 1px solid var(--line2); border-radius: 999px; background: var(--surface); }
+.tchip b { font-size: 14px; }
+.tchip .x { width: 22px; height: 22px; border-radius: 50%; border: 0; background: transparent; color: var(--muted); font-size: 18px; line-height: 1; padding: 0; }
+.tdot.sm { width: 18px; height: 18px; border-width: 2px; }

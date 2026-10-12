@@ -9,10 +9,9 @@
   const KEYS = { '#00f0ff': 'cyan', '#ff2bd6': 'pink', '#b6ff00': 'lime', '#ff9f1a': 'orange', '#a66bff': 'violet', '#ffe600': 'yellow' };
   const PALETTES = {
     soft:  { name: 'Soft',  light: { cyan: '#1f9d93', pink: '#cf5a82', lime: '#74a43c', orange: '#e0822b', violet: '#7b6bd6', yellow: '#d9a21b' }, btn: '#b4dc6a' },
-    earth: { name: 'Earth', light: { cyan: '#2f7f79', pink: '#c4623f', lime: '#7d8a3a', orange: '#d08a2a', violet: '#8a5a8f', yellow: '#c9a23f' }, btn: '#c8d27a' },
     ocean: { name: 'Ocean', light: { cyan: '#12808a', pink: '#e0685a', lime: '#3aa57a', orange: '#ec8b3a', violet: '#5662c9', yellow: '#e0b030' }, btn: '#9bdcc0' },
-    slate: { name: 'Slate', light: { cyan: '#4a7a9a', pink: '#b5575a', lime: '#5f8f68', orange: '#c27a45', violet: '#7f6aa8', yellow: '#bfa05a' }, btn: '#b8d3bd' },
-    neon:  { name: 'Neon',  light: null, btn: null },
+    pastel: { name: 'Pastel', light: { cyan: '#5fb9b0', pink: '#e88fae', lime: '#9cc77a', orange: '#f0a666', violet: '#a597e6', yellow: '#e8c566' }, btn: '#cfe8b0' },
+    dusk: { name: 'Dusk', light: { cyan: '#5b6fd6', pink: '#d4568f', lime: '#4fa38a', orange: '#e8803e', violet: '#8a56c9', yellow: '#e0a830' }, btn: '#c3c8f5' },
   };
   const lighten = (h, t) => '#' + [1, 3, 5].map((i) => Math.round(parseInt(h.slice(i, i + 2), 16) + (255 - parseInt(h.slice(i, i + 2), 16)) * t).toString(16).padStart(2, '0')).join('');
   const SHADE = { '#00f0ff': '#00a6c8', '#ff2bd6': '#e4169f', '#b6ff00': '#66b100', '#ff9f1a': '#f07a00', '#a66bff': '#7c4dff', '#ffe600': '#f0b400' };
@@ -620,8 +619,9 @@
   const tagSettingsHtml = () => {
     const tags = allTags();
     const demo = (tags.length ? tags : ['shopping', 'school', 'home']).slice(0, 3);
-    return `<div class="set-h">Tags</div>
-      ${tags.length ? tags.map((t) => `<div class="srow trow"><button class="tdot" data-action="tagHue" data-tag="${esc(t)}" style="background:${tagColor(t)}" aria-label="Change colour of ${esc(t)}"></button><div><b>#${esc(t)}</b><small>${tagCount(t)} in use · tap the dot for colours</small></div><button class="icon-btn" data-action="tagDel" data-tag="${esc(t)}" aria-label="Delete tag ${esc(t)}">${ICON.trash}</button></div>${tagPick === t ? `<div class="hues">${TAGHUES.map((h, i) => `<button class="sw-c ${(state.settings.tagColors[t] % TAGHUES.length) === i ? 'on' : ''}" style="--sc:${hueCss(h)}" data-action="tagSet" data-tag="${esc(t)}" data-i="${i}" aria-label="Colour ${i + 1}"></button>`).join('')}</div>` : ''}`).join('') : '<p class="muted" style="font-weight:600;font-size:14px;margin:0 0 8px">No tags yet. Add one below.</p>'}
+    return `<div class="set-h" data-hint="${tags.length} tag${tags.length === 1 ? '' : 's'}">Tags &amp; list colour</div>
+      ${tags.length ? `<div class="tchips">${tags.map((t) => `<span class="tchip"><button class="tdot sm" data-action="tagHue" data-tag="${esc(t)}" style="background:${tagColor(t)}" aria-label="Change colour of ${esc(t)}"></button><b title="${tagCount(t)} in use">#${esc(t)}</b><button class="x" data-action="tagDel" data-tag="${esc(t)}" aria-label="Delete tag ${esc(t)}">&times;</button></span>`).join('')}</div>` : '<p class="muted" style="font-weight:600;font-size:14px;margin:0 0 8px">No tags yet. Add one below.</p>'}
+      ${tagPick && tags.includes(tagPick) ? `<div class="hues">${TAGHUES.map((h, i) => `<button class="sw-c ${(state.settings.tagColors[tagPick] % TAGHUES.length) === i ? 'on' : ''}" style="--sc:${hueCss(h)}" data-action="tagSet" data-tag="${esc(tagPick)}" data-i="${i}" aria-label="Colour ${i + 1}"></button>`).join('')}</div><p class="muted" style="font-weight:600;font-size:12px;margin:-6px 0 8px">Colour for #${esc(tagPick)}</p>` : ''}
       <div class="inline" style="margin:8px 0 14px"><input id="s-tagin" type="text" maxlength="20" placeholder="New tag, e.g. shopping" enterkeyhint="done"><button class="btn small" id="s-tagadd" type="button">Add</button></div>
       <div class="fld"><span class="cap">List item fill <b id="s-fillv" style="color:var(--ink)">${fillVal()}%</b></span>
         <input id="s-fill" type="range" min="0" max="50" step="1" value="${fillVal()}" class="range">
@@ -1167,6 +1167,20 @@
 
   /* ---------- settings ---------- */
 
+  const openSecs = new Set();
+  function accordion(html) {
+    const end = html.lastIndexOf('</div>'); const tail = html.slice(end); let body = html.slice(0, end);
+    const parts = body.split('<div class="set-h"');
+    let out = parts[0];
+    for (let i = 1; i < parts.length; i++) {
+      const m = parts[i].match(/^([^>]*)>([\s\S]*?)<\/div>([\s\S]*)$/);
+      if (!m) { out += '<div class="set-h"' + parts[i]; continue; }
+      const hint = (m[1].match(/data-hint="([^"]*)"/) || [])[1]; const force = /data-open="1"/.test(m[1]); const title = m[2];
+      const k = title.replace(/&amp;/g, '&');
+      out += `<details class="acc" data-k="${k}" ${openSecs.has(k) || force ? 'open' : ''}><summary><span>${title}</span>${hint ? `<em>${hint}</em>` : ''}<i class="chev"></i></summary><div class="acc-b">${m[3]}</div></details>`;
+    }
+    return out + tail;
+  }
   let settingsRef = null;
   function settingsSheet() {
     const render = (el) => {
@@ -1181,14 +1195,14 @@
         Promise.all([NB.refreshPerm(), NB.geoStatus ? NB.geoStatus() : null]).then(() => { if (JSON.stringify(NB.perm) + JSON.stringify(NB.geo) !== before && sheets[sheets.length - 1] === render) showTop(); });
       }
       const geoTxt = native && NB.geo ? (NB.geo.bg ? 'Allowed all the time' : NB.geo.fg ? 'Only while the app is open · set to “Allow all the time”' : 'Not allowed') : '';
-      el.innerHTML = `
+      el.innerHTML = accordion(`
         <div class="sheet-h"><h2>Settings</h2><button class="icon-btn" data-action="closeSheet" aria-label="Close">${ICON.close}</button></div>
         <div class="sheet-b">
-          <div class="set-h">Look</div>
+          <div class="srow"><div><b>Iarla's a Sack</b><small>Dark mode</small></div><label class="sw"><input type="checkbox" id="s-dark" ${state.settings.dark ? 'checked' : ''}><span></span></label></div>
+          <div class="set-h" data-hint="${PALETTES[palKey()].name}">Look</div>
           <div class="fld" style="margin:4px 0 12px"><span class="cap">Colours</span>
             <div class="pals">${Object.entries(PALETTES).map(([k, p]) => `<button class="pal ${palKey() === k ? 'on' : ''}" data-action="palette" data-pal="${k}"><i>${['cyan', 'pink', 'lime', 'orange', 'violet', 'yellow'].map((n) => `<u style="background:${p.light ? (isDark() ? lighten(p.light[n], 0.22) : p.light[n]) : (isDark() ? Object.keys(KEYS).find((h) => KEYS[h] === n) : SHADE[Object.keys(KEYS).find((h) => KEYS[h] === n)])}"></u>`).join('')}</i><b>${p.name}</b></button>`).join('')}</div>
           </div>
-          <div class="srow"><div><b>Iarla's a Sack</b><small>Dark mode</small></div><label class="sw"><input type="checkbox" id="s-dark" ${state.settings.dark ? 'checked' : ''}><span></span></label></div>
 
           ${tagSettingsHtml()}
 
@@ -1217,9 +1231,9 @@
           ${(() => {
             const sy = window.NudgeSync; if (!sy) return '';
             const u = sy.ui; const ago = sy.last ? new Date(sy.last).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-            if (u.state === 'pair' && u.pair) return `<div class="set-h">Sync</div><div class="srow"><div><b>Enter this code</b><small>On any device open <a href="${u.pair.url}" target="_blank" rel="noopener">${u.pair.url}</a>, sign in and type the code</small></div></div><div style="font:800 30px/1 ui-monospace,monospace;letter-spacing:.14em;text-align:center;padding:12px 0">${esc(u.pair.code)}</div><button class="btn ghost" style="width:100%" data-action="syncCancel">Cancel</button>`;
-            if (sy.connected) return `<div class="set-h">Sync</div><div class="srow"><div><b>Google Drive</b><small>${u.state === 'busy' ? 'Syncing…' : u.state === 'err' ? esc(u.msg) : 'In step' + (ago ? ' · ' + ago : '')}</small></div>${/Reconnect/.test(u.msg || '') ? '<button class="btn small" data-action="syncOn">Reconnect</button>' : '<button class="btn small" data-action="syncNow">Sync now</button>'}</div><button class="btn ghost" style="width:100%" data-action="syncOff">Disconnect</button>`;
-            return `<div class="set-h">Sync</div><div class="srow"><div><b>Google Drive</b><small>${esc(u.msg) || 'Keep this and your other devices in step'}</small></div><button class="btn small" data-action="syncOn">Connect</button></div>`;
+            if (u.state === 'pair' && u.pair) return `<div class="set-h" data-hint="${esc(window.NudgeSync.ui.state === 'busy' ? 'Syncing' : window.NudgeSync.connected ? 'On' : 'Off')}" data-open="${window.NudgeSync.ui.state === 'pair' || window.NudgeSync.ui.state === 'err' ? 1 : 0}">Sync</div><div class="srow"><div><b>Enter this code</b><small>On any device open <a href="${u.pair.url}" target="_blank" rel="noopener">${u.pair.url}</a>, sign in and type the code</small></div></div><div style="font:800 30px/1 ui-monospace,monospace;letter-spacing:.14em;text-align:center;padding:12px 0">${esc(u.pair.code)}</div><button class="btn ghost" style="width:100%" data-action="syncCancel">Cancel</button>`;
+            if (sy.connected) return `<div class="set-h" data-hint="${esc(window.NudgeSync.ui.state === 'busy' ? 'Syncing' : window.NudgeSync.connected ? 'On' : 'Off')}" data-open="${window.NudgeSync.ui.state === 'pair' || window.NudgeSync.ui.state === 'err' ? 1 : 0}">Sync</div><div class="srow"><div><b>Google Drive</b><small>${u.state === 'busy' ? 'Syncing…' : u.state === 'err' ? esc(u.msg) : 'In step' + (ago ? ' · ' + ago : '')}</small></div>${/Reconnect/.test(u.msg || '') ? '<button class="btn small" data-action="syncOn">Reconnect</button>' : '<button class="btn small" data-action="syncNow">Sync now</button>'}</div><button class="btn ghost" style="width:100%" data-action="syncOff">Disconnect</button>`;
+            return `<div class="set-h" data-hint="${esc(window.NudgeSync.ui.state === 'busy' ? 'Syncing' : window.NudgeSync.connected ? 'On' : 'Off')}" data-open="${window.NudgeSync.ui.state === 'pair' || window.NudgeSync.ui.state === 'err' ? 1 : 0}">Sync</div><div class="srow"><div><b>Google Drive</b><small>${esc(u.msg) || 'Keep this and your other devices in step'}</small></div><button class="btn small" data-action="syncOn">Connect</button></div>`;
           })()}
 
           <div class="set-h">Alerts</div>
@@ -1234,7 +1248,8 @@
           ${standalone || native ? '' : `<div class="srow"><div><b>Install app</b><small>Or Chrome menu → Add to Home screen</small></div>${deferredPrompt ? '<button class="btn small" data-action="install">Install</button>' : ''}</div>`}
           <div style="display:flex;gap:8px"><button class="btn ghost small" data-action="exportData">Export backup</button><button class="btn ghost small" data-action="importData">Import backup</button></div>
           <input type="file" id="s-file" accept="application/json" hidden>
-        </div>`;
+        </div>`);
+      el.querySelectorAll('details.acc').forEach((d) => d.addEventListener('toggle', () => { if (d.open) openSecs.add(d.dataset.k); else openSecs.delete(d.dataset.k); }));
       el.querySelectorAll('[data-det]').forEach((i) => i.addEventListener('change', () => {
         state.settings.details = Object.assign({}, det(), { [i.dataset.det]: i.checked }); save(); renderMain();
       }));
