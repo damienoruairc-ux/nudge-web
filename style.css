@@ -361,3 +361,9 @@ b.when { font-size: 15px; }
 .tchip b { font-size: 14px; }
 .tchip .x { width: 22px; height: 22px; border-radius: 50%; border: 0; background: transparent; color: var(--muted); font-size: 18px; line-height: 1; padding: 0; }
 .tdot.sm { width: 18px; height: 18px; border-width: 2px; }
+/* open section stands out */
+.acc[open] { background: color-mix(in srgb, var(--cyan) 10%, var(--bg)); border-radius: 14px; border-top-color: transparent; margin: 8px 0; padding: 0 14px 0 16px; box-shadow: inset 4px 0 0 var(--cyan); }
+.acc[open] + .acc { border-top-color: transparent; }
+.acc[open] > summary { color: var(--ink); }
+.acc[open] > summary span { color: var(--cyan); }
+.acc[open] .srow, .acc[open] .tchip, .acc[open] .pal { background: var(--bg); }
