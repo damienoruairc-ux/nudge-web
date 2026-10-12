@@ -8,8 +8,8 @@
     tvClientId: '443976648544-dr7bbig3q11nst1efnafu834s6d7017g.apps.googleusercontent.com',
     tvSecret: '__TV_SECRET__',
   };
-  const SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
-  const FILE = 'nudge-sync.json';
+  const SCOPE = 'https://www.googleapis.com/auth/drive.file';
+  const FILE = 'Nudge sync (do not delete).json';
   const LSK = 'nudge.sync.auth';
   const DAY = 86400000;
 
@@ -136,14 +136,14 @@
     return r;
   }
   async function findFile() {
-    const q = encodeURIComponent("name='" + FILE + "'");
-    const j = await (await api('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&orderBy=createdTime&fields=files(id)&q=' + q)).json();
+    const q = encodeURIComponent("name='" + FILE + "' and trashed=false");
+    const j = await (await api('https://www.googleapis.com/drive/v3/files?orderBy=createdTime&fields=files(id)&q=' + q)).json();
     return (j.files && j.files[0]) || null;
   }
   const download = async (id) => (await api('https://www.googleapis.com/drive/v3/files/' + id + '?alt=media')).json();
   async function create(doc) {
     const b = 'nudgeboundary';
-    const body = '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify({ name: FILE, parents: ['appDataFolder'] }) + '\r\n--' + b + '\r\nContent-Type: application/json\r\n\r\n' + JSON.stringify(doc) + '\r\n--' + b + '--';
+    const body = '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify({ name: FILE }) + '\r\n--' + b + '\r\nContent-Type: application/json\r\n\r\n' + JSON.stringify(doc) + '\r\n--' + b + '--';
     return (await api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', headers: { 'Content-Type': 'multipart/related; boundary=' + b }, body })).json();
   }
   const update = (id, doc) => api('https://www.googleapis.com/upload/drive/v3/files/' + id + '?uploadType=media', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(doc) });
