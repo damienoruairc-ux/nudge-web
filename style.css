@@ -371,3 +371,6 @@ b.when { font-size: 15px; }
 .sec-h.row { display: flex; align-items: center; gap: 8px; }
 .sortbtn { margin-left: auto; border: 1px solid var(--line2); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 12px; font: 800 12px/1 inherit; letter-spacing: 0; text-transform: none; }
 .sortbtn { white-space: nowrap; flex: none; }
+
+.tcol { display: flex; flex-direction: column; align-items: flex-start; gap: 0; flex: none; }
+.cd { font-size: 11px; font-weight: 700; color: var(--muted); margin-top: -2px; white-space: nowrap; letter-spacing: 0; }

@@ -47,9 +47,10 @@
     if (!a || !a.time) return out;
     const d = new Date(from.getFullYear(), from.getMonth(), from.getDate());
     let guard = 0;
-    while (d <= to && guard++ < 60) {
+    const skip = a.skip && a.skip.length ? a.skip : null;
+    while (d <= to && guard++ < 400) {
       const t = atTime(d, a.time);
-      if (matchesDay(a, t) && t > from && t <= to) out.push(t);
+      if (matchesDay(a, t) && t > from && t <= to && !(skip && skip.includes(t.getTime()))) out.push(t);
       d.setDate(d.getDate() + 1);
     }
     return out;
@@ -62,7 +63,8 @@
       const t = atTime(parseYmd(a.date), a.time);
       return t > from ? t : null;
     }
-    return occurrences(a, from, addDays(from, 16))[0] || null;
+    const span = Math.min(380, 14 * Math.max(1, Number(a.every) || 1) + 10);
+    return occurrences(a, from, addDays(from, span))[0] || null;
   }
 
   // Date (YYYY-MM-DD) a one-off reminder at `time` should use: today if still ahead, else tomorrow.

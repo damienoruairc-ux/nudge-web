@@ -428,7 +428,17 @@
     el.innerHTML = html;
   }
 
-  const timeCell = (a) => a.loc ? `<div class="time pin">${ICON.pin}</div>` : `<div class="time">${esc(a.time)}</div>`;
+  const dayCount = (a) => {
+    if (a.loc || !a.enabled || a.archived) return '';
+    const now = new Date(); const nx = C.nextOccurrence(a, now); if (!nx) return '';
+    const n = Math.round((new Date(nx.getFullYear(), nx.getMonth(), nx.getDate()) - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 864e5);
+    return n <= 0 ? 'Today' : n === 1 ? 'Tomorrow' : 'in ' + n + ' days';
+  };
+  const timeCell = (a) => {
+    if (a.loc) return `<div class="time pin">${ICON.pin}</div>`;
+    const cd = dayCount(a);
+    return cd ? `<div class="tcol"><div class="time">${esc(a.time)}</div><div class="cd">${cd}</div></div>` : `<div class="time">${esc(a.time)}</div>`;
+  };
   // Time entry: any minute, 24h. Two numeric boxes feeding a hidden input (so .value still works).
   const timeField = (id, v) => {
     const [h, m] = String(v || '09:00').split(':');
@@ -482,11 +492,24 @@
           </button>
           <label class="sw" style="--c:${c}"><input type="checkbox" data-action="toggle" data-id="${a.id}" ${a.enabled ? 'checked' : ''} aria-label="Enable"><span></span></label>`;
     return `<div class="swipe" data-swipe="${a.id}">
-        <div class="swipe-tray">${tray}<button class="tray-b del" data-action="delAlarm" data-id="${a.id}">${ICON.trash}<span>Delete</span></button></div>
+        <div class="swipe-tray">${tray}<button class="tray-b del" data-action="delAlarm" data-id="${a.id}">${ICON.trash}<span>Delete</span></button>${!archived && a.enabled && !a.loc && C.nextOccurrence(a, new Date()) ? `<button class="tray-b go" data-action="doneNext" data-id="${a.id}"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>Done</span></button>` : ''}</div>
         <article class="card swipable ${archived ? 'arch' : a.enabled ? '' : 'off'}" style="--c:${archived ? 'var(--violet)' : c}">${body}</article>
       </div>`;
   }
 
+  function doneNext(id) {
+    const a = state.alarms.find((x) => x.id === id); if (!a) return;
+    const now = new Date(); const nx = C.nextOccurrence(a, now); if (!nx) return;
+    if (!(a.days && a.days.length)) {
+      a.archived = true; a.archivedAt = Date.now(); a.enabled = false;
+      toast('Done · moved to Archived');
+    } else {
+      a.skip = (a.skip || []).filter((t) => t > Date.now()); a.skip.push(nx.getTime());
+      const n2 = C.nextOccurrence(a, now);
+      toast('Done for ' + C.fmtWhen(nx) + (n2 ? ' · next ' + C.fmtWhen(n2) : ''));
+    }
+    save(); afterChange();
+  }
   function archiveAlarm(id) {
     const a = state.alarms.find((x) => x.id === id); if (!a) return;
     a.archived = true; a.archivedAt = Date.now(); a.enabled = false;
@@ -1404,6 +1427,7 @@
       case 'toggleArchive': archOpen = !archOpen; renderList(); break;
       case 'archiveAlarm': archiveAlarm(id); break;
       case 'reactivate': reactivate(id); break;
+      case 'doneNext': doneNext(id); break;
       case 'delAlarm': deleteAlarm(id); break;
       case 'closeSheet': closeSheet(); break;
       case 'editPreset': presetSheet(id || null); break;
@@ -1474,7 +1498,8 @@
     renderMain(); tick(); applyWake();
     if (window.NudgeSync) window.NudgeSync.init({ state: () => state, save, persist: () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignore */ } }, rerender: () => { applyTheme(); renderMain(); syncRing(); }, onStatus: () => { if (sheets.length && sheets[sheets.length - 1] === settingsRef) showTop(); } });
     setInterval(tick, 1000);
-    setInterval(() => { renderToday(); renderNext(); renderNeeds(); }, 30000);
+    let lastDay = new Date().getDate();
+    setInterval(() => { renderToday(); renderNext(); renderNeeds(); if (new Date().getDate() !== lastDay) { lastDay = new Date().getDate(); renderList(); } }, 30000);
     if (isNative()) { setTimeout(pollGeo, 1200); setInterval(pollGeo, 10000); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pollGeo(); }); }
   }
   window.NudgeApp = { getState: () => state, save, tick, fromNotification, handleExternalAction };
