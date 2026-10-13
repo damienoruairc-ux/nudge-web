@@ -390,8 +390,11 @@
 
   function sortedAlarms() {
     const now = new Date();
+    const clock = state.settings.sortMode === 'clock';
+    const mins = (a) => { const m = /^(\d{1,2}):(\d{2})/.exec(a.time || ''); return m ? Number(m[1]) * 60 + Number(m[2]) : 9999; };
     return state.alarms.filter((a) => !isArchived(a) && !a.listId).sort((a, b) => {
       if (a.enabled !== b.enabled) return a.enabled ? -1 : 1;
+      if (clock && mins(a) !== mins(b)) return mins(a) - mins(b);
       const na = C.nextOccurrence(a, now); const nb = C.nextOccurrence(b, now);
       if (na && nb) return na - nb;
       if (na) return -1; if (nb) return 1;
@@ -416,7 +419,7 @@
         ? `<div class="empty"><b>${tagFilter ? 'Nothing tagged #' + esc(tagFilter) : 'Nothing active'}</b>Tap the + button to add a reminder.</div>`
         : `<div class="empty"><b>Nothing set yet</b>Tap the + button to add your first reminder.</div>`;
     } else {
-      html += `<h3 class="sec-h">Reminders <span class="hint">swipe right for options</span></h3>` + active.map((a) => swipeRow(a, false)).join('');
+      html += `<h3 class="sec-h row">Reminders <span class="hint">swipe right for options</span><button class="sortbtn" data-action="sortToggle" aria-label="Change sort order">${ICON.sort || '⇅'} ${state.settings.sortMode === 'clock' ? 'By time' : 'Next due'}</button></h3>` + active.map((a) => swipeRow(a, false)).join('');
     }
     if (arch.length) {
       html += `<button class="arch-h" data-action="toggleArchive" aria-expanded="${archOpen}"><span>Archived <b>${arch.length}</b></span><i class="${archOpen ? 'open' : ''}">${ICON.down}</i></button>`;
@@ -586,7 +589,7 @@
     tab = t;
     $('#tabs').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
     const L = t === 'lists';
-    ['#next', '#list'].forEach((q) => { const e = $(q); if (e) e.hidden = L; });
+    ['#needs', '#next', '#list'].forEach((q) => { const e = $(q); if (e) e.hidden = L; });
     $('#lists').hidden = !L;
     $('#fab').hidden = L;
     $('#fab').setAttribute('aria-label', L ? 'Add list item' : 'Add reminder');
@@ -1112,6 +1115,7 @@
   async function pollGeo() {
     const NB = window.NativeBridge;
     if (!isNative() || !NB.consumeFired) return;
+    if (NB.takeActions) { const acts = await NB.takeActions(); acts.forEach((a) => fromNotification(a.action, a.extra)); }
     const list = await NB.consumeFired();
     if (!list.length) return;
     let changed = false;
@@ -1395,6 +1399,7 @@
       case 'selTag': { const g = t.dataset.tag; listSel = listSel.includes(g) ? listSel.filter((x) => x !== g) : [...listSel, g]; const v = $('#liIn') ? $('#liIn').value : ''; renderLists(); if (v) $('#liIn').value = v; break; }
       case 'toggleDone': doneOpen = !doneOpen; renderLists(); break;
       case 'clearDone': if (confirm('Remove all ticked items?')) { state.items.filter((x) => x.done).forEach((x) => removeItem(x.id)); } break;
+      case 'sortToggle': state.settings.sortMode = state.settings.sortMode === 'clock' ? 'next' : 'clock'; save(); renderList(); toast(state.settings.sortMode === 'clock' ? 'Sorted by time of day' : 'Sorted by next due'); break;
       case 'tagFilter': tagFilter = t.dataset.tag || null; renderList(); break;
       case 'toggleArchive': archOpen = !archOpen; renderList(); break;
       case 'archiveAlarm': archiveAlarm(id); break;
@@ -1470,7 +1475,7 @@
     if (window.NudgeSync) window.NudgeSync.init({ state: () => state, save, persist: () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignore */ } }, rerender: () => { applyTheme(); renderMain(); syncRing(); }, onStatus: () => { if (sheets.length && sheets[sheets.length - 1] === settingsRef) showTop(); } });
     setInterval(tick, 1000);
     setInterval(() => { renderToday(); renderNext(); renderNeeds(); }, 30000);
-    if (isNative()) { setTimeout(pollGeo, 1200); setInterval(pollGeo, 10000); }
+    if (isNative()) { setTimeout(pollGeo, 1200); setInterval(pollGeo, 10000); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pollGeo(); }); }
   }
   window.NudgeApp = { getState: () => state, save, tick, fromNotification, handleExternalAction };
   boot();

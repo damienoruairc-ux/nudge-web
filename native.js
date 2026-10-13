@@ -135,6 +135,10 @@
   };
   NB.openAppSettings = async () => { try { await GF.openAppSettings(); } catch (e) { /* ignore */ } };
   NB.speak = async () => { const r = await GF.speak(); return (r && r.text) || ''; };
+  NB.takeActions = async () => {
+    if (!GF || !GF.takeActions) return [];
+    try { const r = await GF.takeActions(); return (r && r.actions) || []; } catch (e) { return []; }
+  };
   NB.consumeFired = async () => {
     if (!GF) return [];
     try { const r = await GF.consumeFired(); return (r && r.fired) || []; } catch (e) { return []; }
