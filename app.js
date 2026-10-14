@@ -239,7 +239,10 @@
         p = state.pending.filter((q) => q.alarmId === x.alarmId)
           .sort((a, b) => Math.abs(a.firedAt - (x.firedAt || 0)) - Math.abs(b.firedAt - (x.firedAt || 0)))[0];
       }
-      if (p) handleExternalAction(action, p.id);
+      if (p && action === 'snooze' && x.until && x.until > Date.now() - 36e5) {
+        // snoozed from the notification while the app was closed: keep the time that was chosen then
+        snoozeTo(p.id, new Date(Math.max(x.until, Date.now() + 1000)));
+      } else if (p) handleExternalAction(action, p.id);
     }
     afterChange();
   }

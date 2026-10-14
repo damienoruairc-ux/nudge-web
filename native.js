@@ -81,6 +81,16 @@
     if (it.kind === 'snooze') return `Snooze over · ${t}`;
     return t + (it.persistent ? ' · keeps ringing until Done' : '');
   }
+  // What the Snooze button needs to work without the app: how long (or until when) the first preset snoozes for.
+  function snoozeInfo() {
+    try {
+      const pr = (app().getState().presets || [])[0]; if (!pr) return {};
+      const now = new Date(); const when = C.resolveSnooze(pr, now); if (!when) return {};
+      const o = { snoozeLabel: 'Snooze ' + C.presetLabel(pr) };
+      if (pr.type === 'rel') o.snoozeMs = when.getTime() - now.getTime(); else o.snoozeAt = when.getTime();
+      return o;
+    } catch (e) { return {}; }
+  }
   function toLN(it, exactOK) {
     return {
       id: idFor(it.key),
@@ -89,7 +99,7 @@
       channelId: chanId(it.sound),
       schedule: { at: new Date(it.at), allowWhileIdle: true },
       actionTypeId: 'NUDGE',
-      extra: { alarmId: it.alarmId, pid: it.pid || null, firedAt: it.firedAt, kind: it.kind },
+      extra: Object.assign({ alarmId: it.alarmId, pid: it.pid || null, firedAt: it.firedAt, kind: it.kind }, snoozeInfo()),
       smallIcon: 'ic_stat_nudge',
       iconColor: it.color || '#00F0FF',
       autoCancel: true,
